@@ -1,6 +1,9 @@
-#include "defines.h"
 
 #pragma once
+#include <memory>
+#include <vector>
+#include <string>
+
 namespace kal {
 
 // Expressions
@@ -20,18 +23,18 @@ public:
 class VariableExprAST : public ExprAST
 {
 public:
-  String m_name;
-  VariableExprAST(const String& val) : m_name(val) {};
+  std::string m_name;
+  VariableExprAST(const std::string& val) : m_name(val) {};
 };
 
 class BinaryExprAST : public ExprAST
 {
 public:
   char m_op;
-  UPtr<ExprAST> m_lhs, m_rhs;
+  std::unique_ptr<ExprAST> m_lhs, m_rhs;
 
-  BinaryExprAST(char op, UPtr<ExprAST> lhs,
-                UPtr<ExprAST> rhs) : m_op(op),
+  BinaryExprAST(char op, std::unique_ptr<ExprAST> lhs,
+                std::unique_ptr<ExprAST> rhs) : m_op(op),
                                                 m_lhs(std::move(lhs)),
                                                 m_rhs(std::move(rhs)) {};
 };
@@ -39,11 +42,11 @@ public:
 class CallExprAST : public ExprAST
 {
 public:
-  String m_callee;
-  Vector<UPtr<ExprAST>> m_args;
+  std::string m_callee;
+  std::vector<std::unique_ptr<ExprAST>> m_args;
 
-  CallExprAST(const String& callee,
-              Vector<UPtr<ExprAST>> args) :
+  CallExprAST(const std::string& callee,
+              std::vector<std::unique_ptr<ExprAST>> args) :
               m_callee(callee), m_args(std::move(args)) {}
 };
 
@@ -53,22 +56,22 @@ public:
 class PrototypeAST
 {
 public:
-  String m_name;
-  Vector<String> m_args;
+  std::string m_name;
+  std::vector<std::string> m_args;
 
   virtual ~PrototypeAST() = default;
 
-  PrototypeAST(const String& name, Vector<String> args) :
+  PrototypeAST(const std::string& name, std::vector<std::string> args) :
   m_name(name), m_args(std::move(args)) {};
 };
 
 class FunctionAST
 {
 public:
-  UPtr<PrototypeAST> m_proto;
-  UPtr<ExprAST>      m_body;
+  std::unique_ptr<PrototypeAST> m_proto;
+  std::unique_ptr<ExprAST>      m_body;
 
-  FunctionAST(UPtr<PrototypeAST> proto, UPtr<ExprAST> body) :
+  FunctionAST(std::unique_ptr<PrototypeAST> proto, std::unique_ptr<ExprAST> body) :
   m_proto(std::move(proto)), m_body(std::move(body)) {}
 };
 }

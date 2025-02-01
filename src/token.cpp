@@ -1,6 +1,6 @@
 #include "token.h"
 
-kal::Token kal::Tokenizer::get_token()
+int kal::Tokenizer::get_token()
 {
   using namespace kal;
 
@@ -62,5 +62,27 @@ kal::Token kal::Tokenizer::get_token()
 
   int this_char = last_char;
   last_char = getchar();
-  return Token::UNKNOWN;
+  return this_char;
+}
+int kal::Tokenizer::get_next_token() {
+  return s_current_token = get_token();
+}
+void kal::Tokenizer::init_tokenizer_presedence() {
+  s_op_precedence['<'] = 10;
+  s_op_precedence['+'] = 20;
+  s_op_precedence['-'] = 20;
+  s_op_precedence['*'] = 40;
+}
+int kal::Tokenizer::get_token_precedence() {
+  if(!isascii(s_current_token))
+  {
+    return -1;
+  }
+
+  int token_precedence = s_op_precedence[s_current_token];
+
+  if(token_precedence <= 0) return -1;
+
+  return token_precedence;
+
 }
