@@ -1,14 +1,20 @@
 #include "ast.h"
 #include "token.h"
 #include "parse.h"
+#include "generate.h"
 
 using namespace kal;
 
 void HandleDefinition()
 {
-  if(Parser::ParseDefinition())
+  if(auto ast = Parser::ParseDefinition())
   {
-    fprintf(stderr, "Parsed a function definition\n");
+    if(auto* fn_ir = ast->codegen())
+    {
+      fprintf(stderr, "Parsed a definition\n");
+      fn_ir->print(errs());
+      fprintf(stderr, "\n");
+    }
   }
   else
   {
@@ -19,9 +25,14 @@ void HandleDefinition()
 
 void HandleExtern()
 {
-  if(Parser::ParseExtern())
+  if(auto ext = Parser::ParseExtern())
   {
-    fprintf(stderr, "Parsed an external\n");
+    if(auto* fn_ir = ext->codegen())
+    {
+      fprintf(stderr, "Parsed an external\n");
+      fn_ir->print(errs());
+      fprintf(stderr, "\n");
+    }
   }
   else
   {
@@ -31,9 +42,14 @@ void HandleExtern()
 
 void HandleTopLevelExpressions()
 {
-  if(Parser::ParseTopLevelExpr())
+  if(auto tle = Parser::ParseTopLevelExpr())
   {
-    fprintf(stderr, "Parsed a top level expression\n");
+    if(auto* fn_ir = tle->codegen())
+    {
+      fprintf(stderr, "Parsed a top level expression\n");
+      fn_ir->print(errs());
+      fprintf(stderr, "\n");
+    }
   }
   else
   {
@@ -71,8 +87,12 @@ static void MainLoop()
 int main()
 {
   Tokenizer::init_tokenizer_presedence();
+  Generator::init_generator();
+
   fprintf(stderr, "ready> ");
   Tokenizer::get_next_token();
   MainLoop();
+
+  Generator::m_module->print(errs(), nullptr);
   return 0;
 }

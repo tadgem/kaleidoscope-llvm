@@ -7,3 +7,7 @@ std::unique_ptr<kal::PrototypeAST> kal::Helpers::LogErrorProrotype(const char *m
   LogErrorExpr(msg);
   return nullptr;
 }
+llvm::Value *kal::Helpers::LogErrorValue(const char *msg) {
+  LogErrorExpr(msg);
+  return nullptr;
+}

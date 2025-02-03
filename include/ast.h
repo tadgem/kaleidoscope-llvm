@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include "llvm/IR/Value.h"
 
 namespace kal {
 
@@ -11,6 +12,7 @@ namespace kal {
 class ExprAST {
 public:
   virtual ~ExprAST() = default;
+  virtual llvm::Value *codegen() = 0;
 };
 
 class NumberExprAST : public ExprAST
@@ -18,6 +20,8 @@ class NumberExprAST : public ExprAST
 public:
   double m_value;
   NumberExprAST(double val) : m_value(val) {};
+  llvm::Value *codegen() override;
+
 };
 
 class VariableExprAST : public ExprAST
@@ -25,6 +29,8 @@ class VariableExprAST : public ExprAST
 public:
   std::string m_name;
   VariableExprAST(const std::string& val) : m_name(val) {};
+  llvm::Value *codegen() override;
+
 };
 
 class BinaryExprAST : public ExprAST
@@ -37,6 +43,8 @@ public:
                 std::unique_ptr<ExprAST> rhs) : m_op(op),
                                                 m_lhs(std::move(lhs)),
                                                 m_rhs(std::move(rhs)) {};
+  llvm::Value *codegen() override;
+
 };
 
 class CallExprAST : public ExprAST
@@ -48,6 +56,8 @@ public:
   CallExprAST(const std::string& callee,
               std::vector<std::unique_ptr<ExprAST>> args) :
               m_callee(callee), m_args(std::move(args)) {}
+  llvm::Value *codegen() override;
+
 };
 
 
@@ -63,6 +73,8 @@ public:
 
   PrototypeAST(const std::string& name, std::vector<std::string> args) :
   m_name(name), m_args(std::move(args)) {};
+  llvm::Function *codegen();
+
 };
 
 class FunctionAST
@@ -73,5 +85,7 @@ public:
 
   FunctionAST(std::unique_ptr<PrototypeAST> proto, std::unique_ptr<ExprAST> body) :
   m_proto(std::move(proto)), m_body(std::move(body)) {}
+  llvm::Function *codegen();
+
 };
 }
