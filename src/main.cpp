@@ -2,7 +2,29 @@
 #include "token.h"
 #include "parse.h"
 #include "generate.h"
-
+#include "jit.h"
+#include "llvm/Support/Error.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/InstCombine/InstCombine.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/Reassociate.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
 using namespace kal;
 
 void HandleDefinition()
@@ -14,6 +36,16 @@ void HandleDefinition()
       fprintf(stderr, "Parsed a definition\n");
       fn_ir->print(errs());
       fprintf(stderr, "\n");
+      auto err = jit::s_jit->addModule(ThreadSafeModule(
+          std::move(Generator::m_module), std::move(Generator::m_context)
+          ));
+      if(err)
+      {
+        fprintf(stderr, "Failed to add function definition to module");
+      }
+      Generator::init_generator();
+      Generator::init_opt_passes();
+
     }
   }
   else
@@ -32,6 +64,7 @@ void HandleExtern()
       fprintf(stderr, "Parsed an external\n");
       fn_ir->print(errs());
       fprintf(stderr, "\n");
+      Generator::m_function_protos[ext->m_name] = std::move(ext);
     }
   }
   else
@@ -46,9 +79,33 @@ void HandleTopLevelExpressions()
   {
     if(auto* fn_ir = tle->codegen())
     {
-      fprintf(stderr, "Parsed a top level expression\n");
+      auto rt = jit::s_jit->getMainJITDylib().createResourceTracker();
+      auto tsm = ThreadSafeModule(std::move(Generator::m_module),
+                                  std::move(Generator::m_context));
+
+      if(Error err = jit::s_jit->addModule(std::move(tsm), rt))
+      {
+        fprintf(stderr, "Failed to add module to JIT runtime");
+      }
+
       fn_ir->print(errs());
-      fprintf(stderr, "\n");
+
+      // module cannot be modified, so create a new one
+      Generator::init_generator();
+      Generator::init_opt_passes();
+
+      auto ExprSymbol = jit::s_jit->lookup("__anon_expr");
+      assert(ExprSymbol && "Function not found");
+
+      double (*FP)() = ExprSymbol->getAddress().toPtr<double (*)()>();
+      fprintf(stderr, "Evaluated to %f\n", FP());
+
+      auto error = rt->remove();
+
+      if(error)
+      {
+        fprintf(stderr, "Failed to add delete anonymous expression from JIT runtime");
+      }
     }
   }
   else
@@ -80,17 +137,25 @@ static void MainLoop()
         HandleTopLevelExpressions();
         break;
     }
-
   }
 }
 
 int main()
 {
+  llvm::InitializeNativeTarget();
+  llvm::InitializeNativeTargetAsmPrinter();
+  llvm::InitializeNativeTargetAsmParser();
+
   Tokenizer::init_tokenizer_presedence();
-  Generator::init_generator();
 
   fprintf(stderr, "ready> ");
   Tokenizer::get_next_token();
+
+  jit::s_jit = std::move(jit::Create());
+
+  Generator::init_generator();
+  Generator::init_opt_passes();
+
   MainLoop();
 
   Generator::m_module->print(errs(), nullptr);

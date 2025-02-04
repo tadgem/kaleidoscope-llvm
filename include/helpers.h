@@ -4,6 +4,7 @@
 namespace llvm
 {
   class Value;
+  class Function;
 }
 
 namespace kal {
@@ -13,5 +14,6 @@ public:
   static std::unique_ptr<ExprAST>       LogErrorExpr(const char* msg);
   static std::unique_ptr<PrototypeAST>  LogErrorProrotype(const char* msg);
   static llvm::Value*                   LogErrorValue(const char* msg);
+  static llvm::Function*                GetFunction(std::string name);
 };
 }

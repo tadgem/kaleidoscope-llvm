@@ -48,7 +48,7 @@ llvm::Value *kal::BinaryExprAST::codegen() {
   }
 }
 llvm::Value *kal::CallExprAST::codegen() {
-  Function* callee_func = Generator::m_module->getFunction(m_callee);
+  Function* callee_func = Helpers::GetFunction(m_callee);
   if(!callee_func)
   {
     return Helpers::LogErrorValue("Unknown function referenced");
@@ -89,7 +89,7 @@ llvm::Function *kal::PrototypeAST::codegen() {
 }
 
 llvm::Function *kal::FunctionAST::codegen() {
-  Function* f = Generator::m_module->getFunction(m_proto->m_name);
+  Function* f = Helpers::GetFunction(m_proto->m_name);
 
   if(f) {
     if (f->arg_size() != m_proto->m_args.size()) {
@@ -139,6 +139,8 @@ llvm::Function *kal::FunctionAST::codegen() {
 
 
     verifyFunction(*f);
+
+    Generator::m_FPM->run(*f, *Generator::m_FAM);
 
     return f;
   }

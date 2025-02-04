@@ -95,7 +95,7 @@ kal::Parser::ParseBinOpRHS(int precedence, std::unique_ptr<ExprAST> lhs) {
   while(true)
   {
     // rhs is implicitly the current token
-    int token_precedence = Tokenizer::get_token_precedence();
+     int token_precedence = Tokenizer::get_token_precedence();
     // if LHS has higher precedence, just return that
     // as we want to process the LHS first and will naturally
     // move on to RHS as a lower precedence op
@@ -179,7 +179,7 @@ std::unique_ptr<kal::PrototypeAST> kal::Parser::ParseExtern() {
 std::unique_ptr<kal::FunctionAST> kal::Parser::ParseTopLevelExpr() {
   if(auto E = ParseExpression())
   {
-    auto proto = std::make_unique<PrototypeAST>("", std::vector<std::string>());
+    auto proto = std::make_unique<PrototypeAST>("__anon_expr", std::vector<std::string>());
     return std::make_unique<FunctionAST>(std::move(proto), std::move(E));
   }
   return nullptr;
