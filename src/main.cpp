@@ -137,6 +137,12 @@ extern "C" DLLEXPORT double printd(double X) {
   return 0;
 }
 
+/// putchard - putchar that takes a double prints it as a char "%f\n", returning 0.
+extern "C" DLLEXPORT double putchard(double X) {
+  putchar(static_cast<int>(X));
+  return 0;
+}
+
 int main()
 {
   llvm::InitializeNativeTarget();

@@ -298,3 +298,16 @@ llvm::Value *kal::ForExprAST::codegen()
 
   return ConstantFP::getNullValue(Type::getDoubleTy(*Generator::m_context));
 }
+llvm::Value *kal::UnaryExprAST::codegen() {
+  Value* op_v = m_operand->codegen();
+  if(!op_v)
+  {
+    return nullptr;
+  }
+  Function* f = Helpers::GetFunction(std::string("unary") + m_op_code);
+  if(!f)
+  {
+    return Helpers::LogErrorValue("Unknown unary operator");
+  }
+  return Generator::m_ir_builder->CreateCall(f, op_v, "unop");
+}

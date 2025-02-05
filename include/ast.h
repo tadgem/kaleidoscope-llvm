@@ -96,6 +96,19 @@ public:
   llvm::Value *codegen() override;
 };
 
+class UnaryExprAST : public ExprAST
+{
+public:
+  char m_op_code;
+  std::unique_ptr<ExprAST> m_operand;
+
+public:
+  UnaryExprAST(char opcode, std::unique_ptr<ExprAST> operand)
+  : m_op_code(opcode), m_operand(std::move(operand)) {};
+
+  llvm::Value* codegen() override;
+};
+
 
 // Prototypes
 

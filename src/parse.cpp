@@ -1,6 +1,6 @@
 #include "parse.h"
 std::unique_ptr<kal::ExprAST> kal::Parser::ParseExpression() {
-  auto lhs = ParsePrimary();
+  auto lhs = ParseUnaryExpr();
 
   if(!lhs)
   {
@@ -115,7 +115,7 @@ kal::Parser::ParseBinOpRHS(int precedence, std::unique_ptr<ExprAST> lhs) {
     // get rhs token
     Tokenizer::get_next_token();
     // get expression
-    auto rhs = ParsePrimary();
+    auto rhs = ParseUnaryExpr();
     if(!rhs)
     {
       Helpers::LogErrorExpr("Failed to parse expression : {}");
@@ -340,4 +340,20 @@ std::unique_ptr<kal::ExprAST> kal::Parser::ParseForExpr() {
       std::move(end),
       std::move(step),
       std::move(body));
+}
+std::unique_ptr<kal::ExprAST> kal::Parser::ParseUnaryExpr() {
+  auto current_token = Tokenizer::s_current_token;
+  if(!isascii(current_token) || current_token == '(' || current_token == ')')
+  {
+    return ParsePrimary();
+  }
+
+  int op = Tokenizer::s_current_token;
+  Tokenizer::get_next_token();
+
+  if(auto operand = ParseUnaryExpr())
+  {
+    return std::make_unique<UnaryExprAST>(op, std::move(operand));
+  }
+  return nullptr;
 }
