@@ -15,7 +15,7 @@ std::unique_ptr<kal::ExprAST> kal::Parser::ParseParenExpr()
   Tokenizer::get_next_token();
   auto v = ParseExpression();
   if(!v) {
-  return nullptr;
+    return nullptr;
   }
 
   if(Tokenizer::s_current_token != ')')
