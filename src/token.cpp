@@ -42,6 +42,16 @@ int kal::Tokenizer::get_token()
       return Token::ELSE;
     }
 
+    if(s_identifier_str == "for")
+    {
+      return Token::FOR;
+    }
+
+    if(s_identifier_str == "in")
+    {
+      return Token::IN;
+    }
+
     return Token::IDENTIFIER;
   }
 

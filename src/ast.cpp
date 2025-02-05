@@ -206,3 +206,75 @@ llvm::Value *kal::IfExprAST::codegen() {
 
   return phi_node;
 }
+llvm::Value *kal::ForExprAST::codegen()
+{
+  Value* start_v = m_start->codegen();
+  if(!start_v)
+  {
+    return nullptr;
+  }
+  Function* func = Generator::m_ir_builder->GetInsertBlock()->getParent();
+  BasicBlock* preheader_bb = Generator::m_ir_builder->GetInsertBlock();
+  BasicBlock* loop_bb = BasicBlock::Create(*Generator::m_context, "loop", func);
+
+  Generator::m_ir_builder->CreateBr(loop_bb);
+  Generator::m_ir_builder->SetInsertPoint(loop_bb);
+
+  PHINode* var = Generator::m_ir_builder->CreatePHI(
+      Type::getDoubleTy(*Generator::m_context),
+      2,m_variable_name);
+
+  var->addIncoming(start_v, preheader_bb);
+
+  Value* old_value = Generator::m_named_values[m_variable_name];
+  Generator::m_named_values[m_variable_name] = var;
+
+  if(!m_body->codegen())
+  {
+    return nullptr;
+  }
+
+  Value* step_v = nullptr;
+  if(m_step)
+  {
+    step_v = m_step->codegen();
+    if(!step_v)
+    {
+      return nullptr;
+    }
+  }
+  else
+  {
+    step_v = ConstantFP::get(*Generator::m_context, APFloat(1.0));
+  }
+
+  Value* next_var = Generator::m_ir_builder->CreateFAdd(var, step_v, "nextvar");
+
+  Value* end_cond = m_end->codegen();
+  if(!end_cond)
+  {
+    return nullptr;
+  }
+
+  end_cond = Generator::m_ir_builder->CreateFCmpONE(
+      end_cond, ConstantFP::get(*Generator::m_context, APFloat(0.0)), "loopcond");
+
+  BasicBlock* loop_end_bb = Generator::m_ir_builder->GetInsertBlock();
+  BasicBlock* after_bb = BasicBlock::Create(*Generator::m_context, "afterloop", func);
+
+  Generator::m_ir_builder->CreateCondBr(end_cond, loop_bb, after_bb);
+  Generator::m_ir_builder->SetInsertPoint(after_bb);
+
+  var->addIncoming(next_var, loop_end_bb);
+
+  if(old_value)
+  {
+    Generator::m_named_values[m_variable_name] = old_value;
+  }
+  else
+  {
+    Generator::m_named_values.erase(m_variable_name);
+  }
+
+  return ConstantFP::getNullValue(Type::getDoubleTy(*Generator::m_context));
+}

@@ -90,6 +90,8 @@ std::unique_ptr<kal::ExprAST> kal::Parser::ParsePrimary() {
     return ParseParenExpr();
     case Token::IF:
     return ParseIfExpr();
+    case Token::FOR:
+    return ParseForExpr();
   }
 }
 std::unique_ptr<kal::ExprAST>
@@ -225,4 +227,71 @@ std::unique_ptr<kal::ExprAST> kal::Parser::ParseIfExpr() {
       std::move(then_expr),
       std::move(else_expr)
       );
+}
+std::unique_ptr<kal::ExprAST> kal::Parser::ParseForExpr() {
+  Tokenizer::get_next_token();
+  if(Tokenizer::s_current_token != Token::IDENTIFIER)
+  {
+    return Helpers::LogErrorExpr("Expected identifier in for loop");
+  }
+
+  std::string var_name = Tokenizer::s_identifier_str;
+  Tokenizer::get_next_token();
+
+  if(Tokenizer::s_current_token != '=')
+  {
+    return Helpers::LogErrorExpr("expected a '=' after for loop identifier");
+  }
+
+  Tokenizer::get_next_token();
+
+  auto start = ParseExpression();
+
+  if(!start)
+  {
+    return nullptr;
+  }
+  if(Tokenizer::s_current_token != ',')
+  {
+    return Helpers::LogErrorExpr("Expected ',' after for start value");
+  }
+
+  Tokenizer::get_next_token();
+
+  auto end = ParseExpression();
+  if(!end)
+  {
+    return nullptr;
+  }
+
+  std::unique_ptr<ExprAST> step;
+  if(Tokenizer::s_current_token == ',')
+  {
+    Tokenizer::get_next_token();
+    step = ParseExpression();
+    if(!step)
+    {
+      return nullptr;
+    }
+  }
+
+  if(Tokenizer::s_current_token != Token::IN)
+  {
+    return Helpers::LogErrorExpr("Expected 'in' after for loop declaration");
+  }
+
+  Tokenizer::get_next_token();
+
+  auto body = ParseExpression();
+  if(!body)
+  {
+    return nullptr;
+  }
+
+  return std::make_unique<ForExprAST>(
+      var_name,
+      std::move(start),
+      std::move(end),
+      std::move(step),
+      std::move(body));
 }

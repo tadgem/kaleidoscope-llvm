@@ -75,6 +75,27 @@ public:
   llvm::Value *codegen() override;
 };
 
+class ForExprAST : public ExprAST
+{
+public:
+  std::string m_variable_name;
+  std::unique_ptr<ExprAST> m_start, m_end, m_step, m_body;
+
+  ForExprAST(const std::string var_name,
+             std::unique_ptr<ExprAST> start,
+             std::unique_ptr<ExprAST> end,
+             std::unique_ptr<ExprAST> step,
+             std::unique_ptr<ExprAST> body)
+      : m_variable_name(var_name),
+        m_start(std::move(start)),
+        m_end(std::move(end)),
+        m_step(std::move(step)),
+        m_body(std::move(body)) {};
+
+
+  llvm::Value *codegen() override;
+};
+
 
 // Prototypes
 
