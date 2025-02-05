@@ -60,6 +60,21 @@ public:
 
 };
 
+class IfExprAST : public ExprAST
+{
+public:
+  std::unique_ptr<ExprAST> m_cond, m_then, m_else;
+
+  IfExprAST(std::unique_ptr<ExprAST> cond,
+            std::unique_ptr<ExprAST> then,
+            std::unique_ptr<ExprAST> _else) :
+  m_cond(std::move(cond)), m_then(std::move(then)), m_else(std::move(_else))
+  {
+
+  }
+  llvm::Value *codegen() override;
+};
+
 
 // Prototypes
 

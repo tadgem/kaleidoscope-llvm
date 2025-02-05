@@ -88,6 +88,8 @@ std::unique_ptr<kal::ExprAST> kal::Parser::ParsePrimary() {
     return ParseNumberExpression();
     case '(':
     return ParseParenExpr();
+    case Token::IF:
+    return ParseIfExpr();
   }
 }
 std::unique_ptr<kal::ExprAST>
@@ -183,4 +185,44 @@ std::unique_ptr<kal::FunctionAST> kal::Parser::ParseTopLevelExpr() {
     return std::make_unique<FunctionAST>(std::move(proto), std::move(E));
   }
   return nullptr;
+}
+std::unique_ptr<kal::ExprAST> kal::Parser::ParseIfExpr() {
+
+  // eat if token
+  Tokenizer::get_next_token();
+
+  auto condition_expr = ParseExpression();
+  if(!condition_expr)
+  {
+    return nullptr;
+  }
+
+  if(Tokenizer::s_current_token != Token::THEN)
+  {
+    return Helpers::LogErrorExpr("Expected then in if statement");
+  }
+  // eat the then token
+  Tokenizer::get_next_token();
+  auto then_expr = ParseExpression();
+  if(!then_expr)
+  {
+    return nullptr;
+  }
+
+  if(Tokenizer::s_current_token != Token::ELSE)
+  {
+    return Helpers::LogErrorExpr("Expected an else in if statement");
+  }
+  // eat else token
+  Tokenizer::get_next_token();
+  auto else_expr = ParseExpression();
+  if(!else_expr)
+  {
+    return nullptr;
+  }
+  return std::make_unique<IfExprAST>(
+      std::move(condition_expr),
+      std::move(then_expr),
+      std::move(else_expr)
+      );
 }

@@ -14,10 +14,12 @@ public:
 
   static std::unique_ptr<ExprAST>       ParseIdentifierExpr();
 
-  static std::unique_ptr<ExprAST>       ParsePrimary();
+  static std::unique_ptr<ExprAST>       ParseIfExpr();
 
   static std::unique_ptr<ExprAST>       ParseBinOpRHS(int precedence,
                                                 std::unique_ptr<ExprAST> lhs);
+
+  static std::unique_ptr<ExprAST>       ParsePrimary();
 
   static std::unique_ptr<PrototypeAST>  ParsePrototype();
 

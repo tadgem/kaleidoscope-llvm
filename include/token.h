@@ -10,6 +10,9 @@ enum Token {
   EXTERN = -3,
   IDENTIFIER =-4,
   NUMBER=-5,
+  IF = -6,
+  THEN = -7,
+  ELSE = -8,
 
   UNKNOWN = INT32_MAX
 };

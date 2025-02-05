@@ -147,3 +147,62 @@ llvm::Function *kal::FunctionAST::codegen() {
   f->eraseFromParent();
   return nullptr;
 }
+llvm::Value *kal::IfExprAST::codegen() {
+
+  auto* condition_v = m_cond->codegen();
+
+  if(!condition_v)
+  {
+    return nullptr;
+  }
+
+  condition_v = Generator::m_ir_builder->CreateFCmpONE(
+      condition_v, ConstantFP::get(*Generator::m_context, APFloat(0.0)));
+
+  Function* func = Generator::m_ir_builder->GetInsertBlock()->getParent();
+  // create then block and insert into function;
+  BasicBlock* then_block = BasicBlock::Create(
+      *Generator::m_context, "then", func);
+  // create else/merge block but do _NOT_ insert in to function yet
+  BasicBlock* else_block = BasicBlock::Create(*Generator::m_context, "else");
+  BasicBlock* merge_block = BasicBlock::Create(*Generator::m_context, "ifcont");
+
+  // set up then block
+  Generator::m_ir_builder->CreateCondBr(condition_v, then_block, else_block);
+  Generator::m_ir_builder->SetInsertPoint(then_block);
+  auto* then_v = m_then->codegen();
+  if(!then_v)
+  {
+    return nullptr;
+  }
+  // once finished then block, return to merge (statement after end of else)
+  Generator::m_ir_builder->CreateBr(merge_block);
+
+  // set up else block
+  then_block = Generator::m_ir_builder->GetInsertBlock();
+  func->insert(func->end(), else_block);
+  Generator::m_ir_builder->SetInsertPoint(else_block);
+
+  auto* else_v = m_else->codegen();
+  if(!else_v)
+  {
+    return nullptr;
+  }
+  // once finished else, go back to merge block (statement after end of else)
+  Generator::m_ir_builder->CreateBr(merge_block);
+  else_block = Generator::m_ir_builder->GetInsertBlock();
+
+  func->insert(func->end(), merge_block);
+  Generator::m_ir_builder->SetInsertPoint(merge_block);
+
+  PHINode* phi_node = Generator::m_ir_builder->CreatePHI(
+      Type::getDoubleTy(*Generator::m_context),
+      2,
+      "iftmp"
+      );
+
+  phi_node->addIncoming(then_v, then_block);
+  phi_node->addIncoming(else_v, else_block);
+
+  return phi_node;
+}

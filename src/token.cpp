@@ -27,6 +27,21 @@ int kal::Tokenizer::get_token()
       return Token::EXTERN;
     }
 
+    if(s_identifier_str == "if")
+    {
+      return Token::IF;
+    }
+
+    if(s_identifier_str == "then")
+    {
+      return Token::THEN;
+    }
+
+    if(s_identifier_str == "else")
+    {
+      return Token::ELSE;
+    }
+
     return Token::IDENTIFIER;
   }
 
