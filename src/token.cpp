@@ -52,6 +52,16 @@ int kal::Tokenizer::get_token()
       return Token::IN;
     }
 
+    if(s_identifier_str == "binary")
+    {
+      return Token::BINARY;
+    }
+
+    if(s_identifier_str == "unary")
+    {
+      return Token::UNARY;
+    }
+
     return Token::IDENTIFIER;
   }
 

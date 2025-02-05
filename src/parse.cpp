@@ -136,17 +136,58 @@ kal::Parser::ParseBinOpRHS(int precedence, std::unique_ptr<ExprAST> lhs) {
 }
 std::unique_ptr<kal::PrototypeAST> kal::Parser::ParsePrototype() {
   using namespace kal;
-  if(Tokenizer::s_current_token != Token::IDENTIFIER)
-  {
-    return Helpers::LogErrorProrotype("Expected function name in prototype");
-  }
 
-  std::string fn_name = Tokenizer::s_identifier_str;
-  Tokenizer::get_next_token();
+  std::string fn_name;
+
+  int kind = 0;
+  int binary_precedence = 0;
+
+  switch(Tokenizer::s_current_token)
+  {
+  default:
+    Helpers::LogErrorProrotype("Expected function name in prototype");
+  case Token::IDENTIFIER:
+    fn_name = Tokenizer::s_identifier_str;
+    kind = 0;
+    Tokenizer::get_next_token();
+    break;
+  case Token::UNARY:
+    Tokenizer::get_next_token();
+    if(!isascii(Tokenizer::s_current_token))
+    {
+      return Helpers::LogErrorProrotype("Expected a unary operator");
+    }
+    fn_name = "unary";
+    fn_name += (char) Tokenizer::s_current_token;
+    kind = 1;
+    Tokenizer::get_next_token();
+    break;
+  case Token::BINARY:
+    Tokenizer::get_next_token();
+    if(!isascii(Tokenizer::s_current_token))
+    {
+      return Helpers::LogErrorProrotype("Expected a binary operator");
+    }
+    fn_name = "binary";
+    fn_name += (char) Tokenizer::s_current_token;
+    kind = 2;
+
+    Tokenizer::get_next_token();
+    if(Tokenizer::s_current_token == Token::NUMBER)
+    {
+      if(Tokenizer::s_number_value < 1 || Tokenizer::s_number_value > 100)
+      {
+        return Helpers::LogErrorProrotype("Invalid precdence, must be in range 1->100");
+      }
+      binary_precedence = static_cast<int>(Tokenizer::s_number_value);
+      Tokenizer::get_next_token();
+    }
+    break;
+  }
 
   if(Tokenizer::s_current_token != '(')
   {
-    return Helpers::LogErrorProrotype("Expected ')' in prototype");
+    return Helpers::LogErrorProrotype("Expected '(' in prototype");
   }
   std::vector<std::string> arg_names;
   while(Tokenizer::get_next_token() == Token::IDENTIFIER)
@@ -157,9 +198,14 @@ std::unique_ptr<kal::PrototypeAST> kal::Parser::ParsePrototype() {
   {
     return Helpers::LogErrorProrotype("Expected a ')' in prototype");
   }
-
   Tokenizer::get_next_token();
-  return std::make_unique<PrototypeAST>(fn_name, arg_names);
+
+  if(kind && arg_names.size() != kind)
+  {
+    return Helpers::LogErrorProrotype("Invalid number of operands for operator");
+  }
+
+  return std::make_unique<PrototypeAST>(fn_name, arg_names, kind != 0, binary_precedence);
 }
 std::unique_ptr<kal::FunctionAST> kal::Parser::ParseDefinition() {
   Tokenizer::get_next_token();

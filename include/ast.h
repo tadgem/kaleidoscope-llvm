@@ -104,12 +104,25 @@ class PrototypeAST
 public:
   std::string m_name;
   std::vector<std::string> m_args;
-
+  bool  m_is_operator;
+  int   m_precedence;
   virtual ~PrototypeAST() = default;
 
-  PrototypeAST(const std::string& name, std::vector<std::string> args) :
-  m_name(name), m_args(std::move(args)) {};
+  PrototypeAST(const std::string& name, std::vector<std::string> args,
+               bool isOperator = false, int precedence = -1) :
+  m_name(name), m_args(std::move(args)),
+  m_is_operator(isOperator), m_precedence(precedence) {};
+
   llvm::Function *codegen();
+
+  bool is_unary_op() const {return m_is_operator && m_args.size() == 1; }
+  bool is_binary_op() const {return m_is_operator && m_args.size() == 2; }
+
+  char get_operator_name() const
+  {
+    assert(m_is_operator);
+    return m_name[m_name.size() - 1];
+  }
 
 };
 

@@ -44,8 +44,14 @@ llvm::Value *kal::BinaryExprAST::codegen() {
     return Generator::m_ir_builder->CreateUIToFP(
         L, Type::getDoubleTy(*Generator::m_context));
   default:
-    return Helpers::LogErrorValue("Invalid binary operator");
+    break;
   }
+
+  Function* f = Helpers::GetFunction(std::string("binary") + char(m_op));
+  assert(f && "binary operator not found");
+
+  Value* ops[2] = {L, R};
+  return Generator::m_ir_builder->CreateCall(f,ops, "binop");
 }
 llvm::Value *kal::CallExprAST::codegen() {
   Function* callee_func = Helpers::GetFunction(m_callee);
@@ -89,39 +95,48 @@ llvm::Function *kal::PrototypeAST::codegen() {
 }
 
 llvm::Function *kal::FunctionAST::codegen() {
-  Function* f = Helpers::GetFunction(m_proto->m_name);
 
-  if(f) {
-    if (f->arg_size() != m_proto->m_args.size()) {
-      return (Function *)Helpers::LogErrorValue(
-          "Mismatched argument count from previous function definition");
-    }
-
-    unsigned int index = 0;
-    for (auto &arg : f->args()) {
-      if (arg.getName() != m_proto->m_args[index++]) {
-        return (Function *)Helpers::LogErrorValue(
-            "Mismatched argument names in function");
-      }
-    }
-  }
-
-  // if function has not already been defined (not found in the module)
-  if(!f)
-  {
-    f = m_proto->codegen();
-  }
-
-  // failed to generate a function proto
+  auto& p = *m_proto;
+  Generator::m_function_protos[m_proto->m_name] = std::move(m_proto);
+  Function* f = Helpers::GetFunction(p.m_name);
   if(!f)
   {
     return nullptr;
   }
+//
+//  if(f) {
+//    if (f->arg_size() != m_proto->m_args.size()) {
+//      return (Function *)Helpers::LogErrorValue(
+//          "Mismatched argument count from previous function definition");
+//    }
+//
+//    unsigned int index = 0;
+//    for (auto &arg : f->args()) {
+//      if (arg.getName() != m_proto->m_args[index++]) {
+//        return (Function *)Helpers::LogErrorValue(
+//            "Mismatched argument names in function");
+//      }
+//    }
+//  }
+//
+//  // if function has not already been defined (not found in the module)
+//  if(!f)
+//  {
+//    f = m_proto->codegen();
+//  }
+//
+//  // failed to generate a function proto
+//
+//
+//  // Function has already been defined if not empty;
+//  if(!f->empty())
+//  {
+//    return (Function*)Helpers::LogErrorValue("Function cannot be redefined");
+//  }
 
-  // Function has already been defined if not empty;
-  if(!f->empty())
+  if(p.m_is_operator)
   {
-    return (Function*)Helpers::LogErrorValue("Function cannot be redefined");
+    Tokenizer::s_op_precedence[p.get_operator_name()] = p.m_precedence;
   }
 
   BasicBlock* bb = BasicBlock::Create(*Generator::m_context, "entry", f);
@@ -145,6 +160,11 @@ llvm::Function *kal::FunctionAST::codegen() {
     return f;
   }
   f->eraseFromParent();
+
+  if(p.is_binary_op())
+  {
+    Tokenizer::s_op_precedence.erase(p.get_operator_name());
+  }
   return nullptr;
 }
 llvm::Value *kal::IfExprAST::codegen() {
