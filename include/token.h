@@ -6,10 +6,10 @@ namespace kal {
 
 enum Token {
   END_OF_FILE = -1,
-  DEF,
-  EXTERN,
-  IDENTIFIER,
-  NUMBER,
+  DEF = -2,
+  EXTERN = -3,
+  IDENTIFIER =-4,
+  NUMBER=-5,
 
   UNKNOWN = INT32_MAX
 };

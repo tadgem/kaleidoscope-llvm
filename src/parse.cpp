@@ -95,7 +95,7 @@ kal::Parser::ParseBinOpRHS(int precedence, std::unique_ptr<ExprAST> lhs) {
   while(true)
   {
     // rhs is implicitly the current token
-     int token_precedence = Tokenizer::get_token_precedence();
+    int token_precedence = Tokenizer::get_token_precedence();
     // if LHS has higher precedence, just return that
     // as we want to process the LHS first and will naturally
     // move on to RHS as a lower precedence op
