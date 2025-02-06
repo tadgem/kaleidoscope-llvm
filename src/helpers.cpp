@@ -26,3 +26,10 @@ llvm::Function *kal::Helpers::GetFunction(std::string name) {
 
   return nullptr;
 }
+llvm::AllocaInst *
+kal::Helpers::CreateEntryBlockAlloca(llvm::Function *func,
+                                     const std::string &var_name) {
+  llvm::IRBuilder<> tmpb (&func->getEntryBlock(), func->getEntryBlock().begin());
+  return tmpb.CreateAlloca(
+      llvm::Type::getDoubleTy(*Generator::m_context), nullptr, var_name);
+}

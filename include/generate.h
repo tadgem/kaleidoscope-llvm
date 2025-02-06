@@ -24,12 +24,12 @@ public:
 
   inline static bool m_debug_logging = true;
 
-  inline static std::unique_ptr<LLVMContext>                m_context;
-  inline static std::unique_ptr<IRBuilder<>>                m_ir_builder;
-  inline static std::unique_ptr<Module>                     m_module;
-  inline static std::unordered_map<std::string, Value*>     m_named_values;
+  inline static std::unique_ptr<LLVMContext>                  m_context;
+  inline static std::unique_ptr<IRBuilder<>>                  m_ir_builder;
+  inline static std::unique_ptr<Module>                       m_module;
+  inline static std::unordered_map<std::string, AllocaInst*>  m_named_values;
   inline static std::unordered_map<std::string,
-      std::unique_ptr<PrototypeAST>>                        m_function_protos;
+      std::unique_ptr<PrototypeAST>>                          m_function_protos;
 
   // IR Optimzation passes
   inline static std::unique_ptr<FunctionPassManager>            m_FPM;

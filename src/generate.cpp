@@ -3,6 +3,7 @@
 #include "llvm/Transforms/Scalar/Reassociate.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
+#include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "jit.h"
 #include "ast.h"
@@ -30,6 +31,7 @@ void kal::Generator::init_opt_passes() {
 
   m_SI->registerCallbacks(*m_PIC, m_MAM.get());
 
+  m_FPM->addPass(PromotePass());
   m_FPM->addPass(InstCombinePass());
   m_FPM->addPass(ReassociatePass());
   m_FPM->addPass(GVNPass());

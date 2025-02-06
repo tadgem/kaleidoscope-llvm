@@ -13,14 +13,15 @@ Value *kal::NumberExprAST::codegen() {
 }
 
 Value *kal::VariableExprAST::codegen() {
-  Value* v = Generator::m_named_values[m_name];
+  AllocaInst* v = Generator::m_named_values[m_name];
 
   if(!v)
   {
     return Helpers::LogErrorValue("Unknown variable name");
   }
 
-  return v;
+  return Generator::m_ir_builder->CreateLoad(
+      v->getAllocatedType(), v, m_name.c_str());
 }
 llvm::Value *kal::BinaryExprAST::codegen() {
   Value* L = m_lhs->codegen();
@@ -103,36 +104,6 @@ llvm::Function *kal::FunctionAST::codegen() {
   {
     return nullptr;
   }
-//
-//  if(f) {
-//    if (f->arg_size() != m_proto->m_args.size()) {
-//      return (Function *)Helpers::LogErrorValue(
-//          "Mismatched argument count from previous function definition");
-//    }
-//
-//    unsigned int index = 0;
-//    for (auto &arg : f->args()) {
-//      if (arg.getName() != m_proto->m_args[index++]) {
-//        return (Function *)Helpers::LogErrorValue(
-//            "Mismatched argument names in function");
-//      }
-//    }
-//  }
-//
-//  // if function has not already been defined (not found in the module)
-//  if(!f)
-//  {
-//    f = m_proto->codegen();
-//  }
-//
-//  // failed to generate a function proto
-//
-//
-//  // Function has already been defined if not empty;
-//  if(!f->empty())
-//  {
-//    return (Function*)Helpers::LogErrorValue("Function cannot be redefined");
-//  }
 
   if(p.m_is_operator)
   {
@@ -145,7 +116,10 @@ llvm::Function *kal::FunctionAST::codegen() {
   Generator::m_named_values.clear();
   for(auto& arg : f->args())
   {
-    Generator::m_named_values[std::string(arg.getName())] = &arg;
+    AllocaInst* _alloca = Helpers::CreateEntryBlockAlloca(f, std::string(arg.getName()));
+    Generator::m_ir_builder->CreateStore(&arg, _alloca);
+
+    Generator::m_named_values[std::string(arg.getName())] = _alloca;
   }
 
   if(Value* ret_val = m_body->codegen())
@@ -228,12 +202,16 @@ llvm::Value *kal::IfExprAST::codegen() {
 }
 llvm::Value *kal::ForExprAST::codegen()
 {
+  Function* func = Generator::m_ir_builder->GetInsertBlock()->getParent();
+  AllocaInst* _alloca = Helpers::CreateEntryBlockAlloca(func, m_variable_name);
+
   Value* start_v = m_start->codegen();
   if(!start_v)
   {
     return nullptr;
   }
-  Function* func = Generator::m_ir_builder->GetInsertBlock()->getParent();
+
+  Generator::m_ir_builder->CreateStore(start_v, _alloca);
   BasicBlock* preheader_bb = Generator::m_ir_builder->GetInsertBlock();
   BasicBlock* loop_bb = BasicBlock::Create(*Generator::m_context, "loop", func);
 
@@ -247,7 +225,7 @@ llvm::Value *kal::ForExprAST::codegen()
   var->addIncoming(start_v, preheader_bb);
 
   Value* old_value = Generator::m_named_values[m_variable_name];
-  Generator::m_named_values[m_variable_name] = var;
+  Generator::m_named_values[m_variable_name] = _alloca;
 
   if(!m_body->codegen())
   {
@@ -268,13 +246,17 @@ llvm::Value *kal::ForExprAST::codegen()
     step_v = ConstantFP::get(*Generator::m_context, APFloat(1.0));
   }
 
-  Value* next_var = Generator::m_ir_builder->CreateFAdd(var, step_v, "nextvar");
-
   Value* end_cond = m_end->codegen();
   if(!end_cond)
   {
     return nullptr;
   }
+
+  Value* cur_var = Generator::m_ir_builder->CreateLoad(
+      _alloca->getAllocatedType(), _alloca, m_variable_name.c_str());
+  Value* next_var = Generator::m_ir_builder->CreateFAdd(
+      cur_var, step_v, "nextvar");
+  Generator::m_ir_builder->CreateStore(next_var, _alloca);
 
   end_cond = Generator::m_ir_builder->CreateFCmpONE(
       end_cond, ConstantFP::get(*Generator::m_context, APFloat(0.0)), "loopcond");
@@ -289,7 +271,7 @@ llvm::Value *kal::ForExprAST::codegen()
 
   if(old_value)
   {
-    Generator::m_named_values[m_variable_name] = old_value;
+    Generator::m_named_values[m_variable_name] = _alloca;
   }
   else
   {
