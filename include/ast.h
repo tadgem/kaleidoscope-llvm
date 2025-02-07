@@ -33,6 +33,20 @@ public:
 
 };
 
+class VariableAssignmentExpr : public ExprAST
+{
+public:
+  std::vector<std::pair<std::string, std::unique_ptr<ExprAST>>> m_var_names;
+  std::unique_ptr<ExprAST> m_body;
+
+  VariableAssignmentExpr(
+      std::vector<std::pair<std::string, std::unique_ptr<ExprAST>>> varNames,
+      std::unique_ptr<ExprAST> body
+      ) : m_var_names(std::move(varNames)), m_body(std::move(body)){};
+
+  llvm::Value* codegen() override;
+};
+
 class BinaryExprAST : public ExprAST
 {
 public:

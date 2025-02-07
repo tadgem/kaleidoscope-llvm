@@ -92,6 +92,8 @@ std::unique_ptr<kal::ExprAST> kal::Parser::ParsePrimary() {
     return ParseIfExpr();
     case Token::FOR:
     return ParseForExpr();
+    case Token::VARIABLE:
+    return ParseVariableAssignment();
   }
 }
 std::unique_ptr<kal::ExprAST>
@@ -356,4 +358,58 @@ std::unique_ptr<kal::ExprAST> kal::Parser::ParseUnaryExpr() {
     return std::make_unique<UnaryExprAST>(op, std::move(operand));
   }
   return nullptr;
+}
+
+std::unique_ptr<kal::ExprAST> kal::Parser::ParseVariableAssignment() {
+  Tokenizer::get_next_token();
+
+  std::vector<std::pair<std::string, std::unique_ptr<ExprAST>>> var_names;
+
+  if (Tokenizer::s_current_token != Token::IDENTIFIER) {
+    return Helpers::LogErrorExpr("Expected a name in variable declaration");
+  }
+
+  while (true) {
+    std::string name = Tokenizer::s_identifier_str;
+    Tokenizer::get_next_token();
+
+    std::unique_ptr<ExprAST> init;
+    if (Tokenizer::s_current_token == '=')
+    {
+      Tokenizer::get_next_token();
+      init = ParseExpression();
+      if(!init)
+      {
+        return Helpers::LogErrorExpr("Failed to evaluate RHS of variable assignment expression");
+      }
+    }
+
+    var_names.push_back(std::make_pair(name, std::move(init)));
+
+    if(Tokenizer::s_current_token != ',')
+    {
+      break;
+    }
+
+    Tokenizer::get_next_token();
+    if(Tokenizer::s_current_token != Token::IDENTIFIER)
+    {
+      return Helpers::LogErrorExpr("Expected identifier list after var");
+    }
+  }
+  if(Tokenizer::s_current_token != Token::IN)
+  {
+    return Helpers::LogErrorExpr("Expected 'in' after 'var'");
+  }
+  Tokenizer::get_next_token();
+
+  auto body = ParseExpression();
+  if(!body)
+  {
+    return nullptr;
+  }
+
+  return std::make_unique<VariableAssignmentExpr>(
+      std::move(var_names),
+      std::move(body));
 }

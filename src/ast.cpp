@@ -317,3 +317,44 @@ llvm::Value *kal::UnaryExprAST::codegen() {
   }
   return Generator::m_ir_builder->CreateCall(f, op_v, "unop");
 }
+llvm::Value *kal::VariableAssignmentExpr::codegen() {
+
+  std::vector<AllocaInst*> old_bindings;
+
+  llvm::Function* func = Generator::m_ir_builder->GetInsertBlock()->getParent();
+  for(auto i = 0; i < m_var_names.size(); i++)
+  {
+    const std::string& name = m_var_names[i].first;
+    ExprAST* init = m_var_names[i].second.get();
+    Value* init_value;
+    if(init)
+    {
+      init_value = init->codegen();
+      if(!init_value)
+      {
+        return nullptr;
+      }
+    }
+    else
+    {
+      init_value = ConstantFP::get(*Generator::m_context, APFloat(0.0));
+    }
+
+    AllocaInst* _alloca = Helpers::CreateEntryBlockAlloca(func, name);
+    Generator::m_ir_builder->CreateStore(init_value, _alloca);
+
+    old_bindings.push_back(Generator::m_named_values[name]);
+    Generator::m_named_values[name] = _alloca;
+  }
+
+  Value* body_val = m_body->codegen();
+  if(!body_val)
+  {
+    return nullptr;
+  }
+  for(int i = 0; i < old_bindings.size(); i++)
+  {
+    Generator::m_named_values[m_var_names[i].first] = old_bindings[i];
+  }
+  return body_val;
+}

@@ -25,6 +25,8 @@ public:
 
   static std::unique_ptr<ExprAST>       ParsePrimary();
 
+  static std::unique_ptr<ExprAST>       ParseVariableAssignment();
+
   static std::unique_ptr<PrototypeAST>  ParsePrototype();
 
   static std::unique_ptr<FunctionAST>   ParseDefinition();

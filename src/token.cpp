@@ -62,6 +62,11 @@ int kal::Tokenizer::get_token()
       return Token::UNARY;
     }
 
+    if(s_identifier_str == "var")
+    {
+      return Token::VARIABLE;
+    }
+
     return Token::IDENTIFIER;
   }
 

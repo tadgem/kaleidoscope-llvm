@@ -17,6 +17,7 @@ enum Token {
   IN = -10,
   BINARY = -11,
   UNARY  = -12,
+  VARIABLE = -13,
 
   UNKNOWN = INT32_MAX
 };
