@@ -24,6 +24,30 @@ Value *kal::VariableExprAST::codegen() {
       v->getAllocatedType(), v, m_name.c_str());
 }
 llvm::Value *kal::BinaryExprAST::codegen() {
+
+  // special case for assignment
+  if(m_op == '=')
+  {
+    auto* lhse = static_cast<VariableExprAST*>(m_lhs.get());
+    if(!lhse)
+    {
+      return Helpers::LogErrorValue("Destination of '=' must be a variable");
+    }
+
+    llvm::Value* val = m_rhs->codegen();
+    if(!val)
+    {
+      return nullptr;
+    }
+    Value* var = Generator::m_named_values[std::string(lhse->m_name)];
+    if(!var)
+    {
+      return Helpers::LogErrorValue("Unknown variable name");
+    }
+
+    Generator::m_ir_builder->CreateStore(val, var);
+    return val;
+  }
   Value* L = m_lhs->codegen();
   Value* R = m_rhs->codegen();
 

@@ -103,6 +103,7 @@ int kal::Tokenizer::get_next_token() {
   return s_current_token = get_token();
 }
 void kal::Tokenizer::init_tokenizer_presedence() {
+  s_op_precedence['='] = 2;
   s_op_precedence['<'] = 10;
   s_op_precedence['+'] = 20;
   s_op_precedence['-'] = 20;
