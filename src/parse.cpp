@@ -207,7 +207,7 @@ std::unique_ptr<kal::PrototypeAST> kal::Parser::ParsePrototype() {
     return Helpers::LogErrorProrotype("Invalid number of operands for operator");
   }
 
-  return std::make_unique<PrototypeAST>(fn_name, arg_names, kind != 0, binary_precedence);
+  return std::make_unique<PrototypeAST>(Tokenizer::m_debug_current_loc, fn_name, arg_names, kind != 0, binary_precedence);
 }
 std::unique_ptr<kal::FunctionAST> kal::Parser::ParseDefinition() {
   Tokenizer::get_next_token();
@@ -231,7 +231,8 @@ std::unique_ptr<kal::PrototypeAST> kal::Parser::ParseExtern() {
 std::unique_ptr<kal::FunctionAST> kal::Parser::ParseTopLevelExpr() {
   if(auto E = ParseExpression())
   {
-    auto proto = std::make_unique<PrototypeAST>("main", std::vector<std::string>());
+    auto proto = std::make_unique<PrototypeAST>(Tokenizer::m_debug_current_loc,
+                                          "main", std::vector<std::string>());
     return std::make_unique<FunctionAST>(std::move(proto), std::move(E));
   }
   return nullptr;

@@ -9,6 +9,10 @@
 using namespace llvm;
 
 Value *kal::NumberExprAST::codegen() {
+  if(Generator::m_debug)
+  {
+    Generator::m_debug_info.emit_location(this);
+  }
   return ConstantFP::get(*Generator::m_context, APFloat(m_value));
 }
 
@@ -19,12 +23,18 @@ Value *kal::VariableExprAST::codegen() {
   {
     return Helpers::LogErrorValue("Unknown variable name");
   }
-
+  if(Generator::m_debug)
+  {
+    Generator::m_debug_info.emit_location(this);
+  }
   return Generator::m_ir_builder->CreateLoad(
       v->getAllocatedType(), v, m_name.c_str());
 }
 llvm::Value *kal::BinaryExprAST::codegen() {
-
+  if(Generator::m_debug)
+  {
+    Generator::m_debug_info.emit_location(this);
+  }
   // special case for assignment
   if(m_op == '=')
   {
@@ -79,6 +89,10 @@ llvm::Value *kal::BinaryExprAST::codegen() {
   return Generator::m_ir_builder->CreateCall(f,ops, "binop");
 }
 llvm::Value *kal::CallExprAST::codegen() {
+  if(Generator::m_debug)
+  {
+    Generator::m_debug_info.emit_location(this);
+  }
   Function* callee_func = Helpers::GetFunction(m_callee);
   if(!callee_func)
   {
@@ -128,7 +142,25 @@ llvm::Function *kal::FunctionAST::codegen() {
   {
     return nullptr;
   }
+  DISubprogram *sub_prog;
+  DIFile *unit;
+  unsigned int line_no = p.m_line_no;
+  if(Generator::m_debug) {
+    unit = Generator::m_debug_builder->createFile(
+        Generator::m_debug_info.m_compile_unit->getFilename(),
+        Generator::m_debug_info.m_compile_unit->getDirectory());
 
+    DIScope *func_context = unit;
+    unsigned int scope_line = 0;
+
+    sub_prog = Generator::m_debug_builder->createFunction(
+        func_context, p.m_name, StringRef(), unit, line_no,
+        Helpers::CreateDebugFunctionType(f->arg_size()), scope_line,
+        DINode::FlagPrototyped, DISubprogram::SPFlagDefinition);
+    f->setSubprogram(sub_prog);
+    Generator::m_debug_info.m_lexical_blocks.push_back(sub_prog);
+    Generator::m_debug_info.emit_location(nullptr);
+  }
   if(p.m_is_operator)
   {
     Tokenizer::s_op_precedence[p.get_operator_name()] = p.m_precedence;
@@ -138,27 +170,41 @@ llvm::Function *kal::FunctionAST::codegen() {
   Generator::m_ir_builder->SetInsertPoint(bb);
 
   Generator::m_named_values.clear();
+  int arg_index = 0;
   for(auto& arg : f->args())
   {
     AllocaInst* _alloca = Helpers::CreateEntryBlockAlloca(f, std::string(arg.getName()));
+    if(Generator::m_debug)
+    {
+      DILocalVariable* d = Generator::m_debug_builder->createParameterVariable(
+      sub_prog, arg.getName(), ++arg_index, unit, line_no, Generator::m_debug_info.get_double_type());
+
+      Generator::m_debug_builder->insertDeclare(_alloca, d,
+        Generator::m_debug_builder->createExpression(),
+        DILocation::get(sub_prog->getContext(), line_no, 0, sub_prog),
+        Generator::m_ir_builder->GetInsertBlock());
+
+    }
     Generator::m_ir_builder->CreateStore(&arg, _alloca);
 
     Generator::m_named_values[std::string(arg.getName())] = _alloca;
   }
 
+  Generator::m_debug_info.emit_location(m_body.get());
+
   if(Value* ret_val = m_body->codegen())
   {
     Generator::m_ir_builder->CreateRet(ret_val);
-
-
     verifyFunction(*f);
-
     Generator::m_FPM->run(*f, *Generator::m_FAM);
-
+    if(Generator::m_debug)
+    {
+      Generator::m_debug_info.m_lexical_blocks.pop_back();
+    }
     return f;
   }
-  f->eraseFromParent();
 
+  f->eraseFromParent();
   if(p.is_binary_op())
   {
     Tokenizer::s_op_precedence.erase(p.get_operator_name());
@@ -166,7 +212,10 @@ llvm::Function *kal::FunctionAST::codegen() {
   return nullptr;
 }
 llvm::Value *kal::IfExprAST::codegen() {
-
+  if(Generator::m_debug)
+  {
+    Generator::m_debug_info.emit_location(this);
+  }
   auto* condition_v = m_cond->codegen();
 
   if(!condition_v)
@@ -228,7 +277,10 @@ llvm::Value *kal::ForExprAST::codegen()
 {
   Function* func = Generator::m_ir_builder->GetInsertBlock()->getParent();
   AllocaInst* _alloca = Helpers::CreateEntryBlockAlloca(func, m_variable_name);
-
+  if(Generator::m_debug)
+  {
+    Generator::m_debug_info.emit_location(this);
+  }
   Value* start_v = m_start->codegen();
   if(!start_v)
   {
@@ -305,6 +357,10 @@ llvm::Value *kal::ForExprAST::codegen()
   return ConstantFP::getNullValue(Type::getDoubleTy(*Generator::m_context));
 }
 llvm::Value *kal::UnaryExprAST::codegen() {
+  if(Generator::m_debug)
+  {
+    Generator::m_debug_info.emit_location(this);
+  }
   Value* op_v = m_operand->codegen();
   if(!op_v)
   {
@@ -346,7 +402,10 @@ llvm::Value *kal::VariableAssignmentExpr::codegen() {
     old_bindings.push_back(Generator::m_named_values[name]);
     Generator::m_named_values[name] = _alloca;
   }
-
+  if(Generator::m_debug)
+  {
+    Generator::m_debug_info.emit_location(this);
+  }
   Value* body_val = m_body->codegen();
   if(!body_val)
   {

@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include "llvm/IR/Value.h"
+#include "token.h"
 
 namespace kal {
 
@@ -11,6 +12,13 @@ namespace kal {
 
 class ExprAST {
 public:
+  SourceLocation m_source_loc;
+  ExprAST(SourceLocation loc = Tokenizer::m_debug_current_loc) :
+  m_source_loc(loc) {};
+
+  int get_line() { return m_source_loc.m_line;}
+  int get_col() { return m_source_loc.m_col;}
+
   virtual ~ExprAST() = default;
   virtual llvm::Value *codegen() = 0;
 };
@@ -129,15 +137,16 @@ public:
 class PrototypeAST
 {
 public:
+  int m_line_no;
   std::string m_name;
   std::vector<std::string> m_args;
   bool  m_is_operator;
   int   m_precedence;
   virtual ~PrototypeAST() = default;
 
-  PrototypeAST(const std::string& name, std::vector<std::string> args,
+  PrototypeAST(SourceLocation& loc, const std::string& name, std::vector<std::string> args,
                bool isOperator = false, int precedence = -1) :
-  m_name(name), m_args(std::move(args)),
+  m_name(name), m_args(std::move(args)), m_line_no(loc.m_line),
   m_is_operator(isOperator), m_precedence(precedence) {};
 
   llvm::Function *codegen();

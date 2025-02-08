@@ -33,3 +33,16 @@ kal::Helpers::CreateEntryBlockAlloca(llvm::Function *func,
   return tmpb.CreateAlloca(
       llvm::Type::getDoubleTy(*Generator::m_context), nullptr, var_name);
 }
+llvm::DISubroutineType* kal::Helpers::CreateDebugFunctionType(int num_args) {
+  llvm::SmallVector<Metadata*, 8> element_types;
+  DIType* double_type = Generator::m_debug_info.get_double_type();
+
+  element_types.push_back(double_type);
+  for(int i = 0; i < num_args; i++)
+  {
+    element_types.push_back(double_type);
+  }
+  return Generator::m_debug_builder->createSubroutineType(
+      Generator::m_debug_builder->getOrCreateTypeArray(element_types)
+      );
+}

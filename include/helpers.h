@@ -6,6 +6,7 @@ namespace llvm
   class Value;
   class Function;
   class AllocaInst;
+  class DISubroutineType;
 }
 
 namespace kal {
@@ -18,7 +19,7 @@ public:
   static llvm::Function*                GetFunction(std::string name);
   static llvm::AllocaInst*              CreateEntryBlockAlloca(
       llvm::Function* func, const std::string& var_name);
-
+  static llvm::DISubroutineType*        CreateDebugFunctionType(int num_args);
 
 };
 }

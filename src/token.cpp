@@ -7,7 +7,7 @@ int kal::Tokenizer::get_token()
   static int last_char = ' ';
   while(isspace(last_char))
   {
-    last_char = getchar();
+    last_char = Tokenizer::advance();
   }
 
   if(isalpha(last_char))
@@ -126,4 +126,18 @@ int kal::Tokenizer::get_token_precedence() {
 
   return token_precedence;
 
+}
+
+int kal::Tokenizer::advance() {
+  int last_char = getchar();
+  if(last_char == '\n' || last_char == '\r')
+  {
+    m_debug_lexer_loc.m_line++;
+    m_debug_lexer_loc.m_col = 0;
+  }
+  else
+  {
+    m_debug_lexer_loc.m_col++;
+  }
+  return last_char;
 }

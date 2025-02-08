@@ -2,6 +2,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/Module.h"
 #include <llvm/IR/PassManager.h>
@@ -15,6 +16,17 @@ using namespace llvm;
 
 namespace kal {
 class PrototypeAST;
+class ExprAST;
+
+struct DebugInfo
+{
+  DICompileUnit*          m_compile_unit;
+  DIType*                 m_double_type;
+  std::vector<DIScope *>  m_lexical_blocks;
+
+  DIType*                 get_double_type();
+  void                    emit_location(ExprAST* ast);
+};
 
 class Generator {
 public:
@@ -32,6 +44,11 @@ public:
   inline static std::unordered_map<std::string, AllocaInst*>  m_named_values;
   inline static std::unordered_map<std::string,
       std::unique_ptr<PrototypeAST>>                          m_function_protos;
+
+  // Debug info (DWARF)
+  inline static std::unique_ptr<DIBuilder>                    m_debug_builder;
+  inline static DebugInfo                                     m_debug_info;
+
 
   // IR Optimzation passes
   inline static std::unique_ptr<FunctionPassManager>            m_FPM;

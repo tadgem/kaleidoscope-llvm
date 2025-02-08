@@ -208,6 +208,10 @@ int main() {
   }
   else
   {
+    if(Generator::m_debug)
+    {
+        Generator::m_debug_builder->finalize();
+    }
     Generator::m_module->print(errs(), nullptr);
   }
   return 0;

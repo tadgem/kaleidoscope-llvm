@@ -22,6 +22,13 @@ enum Token {
   UNKNOWN = INT32_MAX
 };
 
+
+struct SourceLocation
+{
+  int m_line;
+  int m_col;
+};
+
 class Tokenizer {
 public:
 
@@ -34,5 +41,10 @@ public:
   inline static double                s_number_value;
   inline static int                   s_current_token = 0;
   inline static std::map<char, int>   s_op_precedence;
+
+  inline static SourceLocation                                m_debug_current_loc;
+  inline static SourceLocation                                m_debug_lexer_loc;
+
+  static int advance();
 };
 } // namespace turas
