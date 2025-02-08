@@ -23,6 +23,8 @@ public:
   static void init_opt_passes();
 
   inline static bool m_debug = true;
+  inline static bool m_output_object_file = false;
+  inline static bool m_output_statement_ir_to_console = false;
 
   inline static std::unique_ptr<LLVMContext>                  m_context;
   inline static std::unique_ptr<IRBuilder<>>                  m_ir_builder;

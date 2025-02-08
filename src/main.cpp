@@ -19,18 +19,23 @@ void HandleDefinition()
   {
     if(auto* fn_ir = ast->codegen())
     {
-      fprintf(stderr, "Parsed a definition\n");
-      fn_ir->print(errs());
-      fprintf(stderr, "\n");
-      auto err = jit::s_jit->addModule(ThreadSafeModule(
-          std::move(Generator::m_module), std::move(Generator::m_context)
-          ));
-      if(err)
-      {
-        fprintf(stderr, "Failed to add function definition to module");
+      if(Generator::m_output_statement_ir_to_console) {
+        fprintf(stderr, "Parsed a definition\n");
+        fn_ir->print(errs());
+        fprintf(stderr, "\n");
       }
-      Generator::init_generator();
-      Generator::init_opt_passes();
+      if(target::m_use_jit)
+      {
+        auto err = jit::s_jit->addModule(ThreadSafeModule(
+            std::move(Generator::m_module), std::move(Generator::m_context)
+            ));
+        if(err)
+        {
+          fprintf(stderr, "Failed to add function definition to module");
+        }
+        Generator::init_generator();
+        Generator::init_opt_passes();
+      }
 
     }
   }
@@ -47,10 +52,16 @@ void HandleExtern()
   {
     if(auto* fn_ir = ext->codegen())
     {
-      fprintf(stderr, "Parsed an external\n");
-      fn_ir->print(errs());
-      fprintf(stderr, "\n");
+      if(Generator::m_output_statement_ir_to_console) {
+        fprintf(stderr, "Parsed an external\n");
+        fn_ir->print(errs());
+        fprintf(stderr, "\n");
+      }
       Generator::m_function_protos[ext->m_name] = std::move(ext);
+    }
+    else
+    {
+      fprintf(stderr, "Error parsing external");
     }
   }
   else
@@ -65,33 +76,40 @@ void HandleTopLevelExpressions()
   {
     if(auto* fn_ir = tle->codegen())
     {
-      auto rt = jit::s_jit->getMainJITDylib().createResourceTracker();
-      auto tsm = ThreadSafeModule(std::move(Generator::m_module),
-                                  std::move(Generator::m_context));
+      if(target::m_use_jit) {
+        auto rt = jit::s_jit->getMainJITDylib().createResourceTracker();
+        auto tsm = ThreadSafeModule(std::move(Generator::m_module),
+                                    std::move(Generator::m_context));
 
-      if(Error err = jit::s_jit->addModule(std::move(tsm), rt))
-      {
-        fprintf(stderr, "Failed to add module to JIT runtime");
+        if (Error err = jit::s_jit->addModule(std::move(tsm), rt)) {
+          fprintf(stderr, "Failed to add module to JIT runtime");
+        }
+        if(Generator::m_output_statement_ir_to_console)
+        {
+          fn_ir->print(errs());
+        }
+
+        // module cannot be modified, so create a new one
+        Generator::init_generator();
+        Generator::init_opt_passes();
+
+        auto ExprSymbol = jit::s_jit->lookup("main");
+        assert(ExprSymbol && "Function not found");
+
+        double (*FP)() = ExprSymbol->getAddress().toPtr<double (*)()>();
+        fprintf(stderr, "Evaluated to %f\n", FP());
+
+        auto error = rt->remove();
+
+        if (error) {
+          fprintf(stderr,
+                  "Failed to add delete anonymous expression from JIT runtime");
+        }
       }
-
-      fn_ir->print(errs());
-
-      // module cannot be modified, so create a new one
-      Generator::init_generator();
-      Generator::init_opt_passes();
-
-      auto ExprSymbol = jit::s_jit->lookup("main");
-      assert(ExprSymbol && "Function not found");
-
-      double (*FP)() = ExprSymbol->getAddress().toPtr<double (*)()>();
-      fprintf(stderr, "Evaluated to %f\n", FP());
-
-      auto error = rt->remove();
-
-      if(error)
-      {
-        fprintf(stderr, "Failed to add delete anonymous expression from JIT runtime");
-      }
+    }
+    else
+    {
+      fprintf(stderr, "Error generating top level expression");
     }
   }
   else
@@ -104,11 +122,14 @@ static void MainLoop()
 {
   while(true)
   {
-    fprintf(stderr, "ready> ");
+    if(target::m_use_jit)
+    {
+      fprintf(stderr, "ready> ");
+    }
+
     switch(Tokenizer::s_current_token)
     {
       case Token::END_OF_FILE:
-        fprintf(stderr, "End of file encountered");
         return;
       case ';':
         Tokenizer::get_next_token();
@@ -145,14 +166,17 @@ extern "C" DLLEXPORT double putchard(double X) {
   return 0;
 }
 
-int main()
-{
+int main() {
+  Generator::m_debug = true;
+  Generator::m_output_object_file = false;
   target::m_use_jit = false;
+
   target::init_target();
   Tokenizer::init_tokenizer_presedence();
 
-  fprintf(stderr, "ready> ");
-
+  if (target::m_use_jit) {
+    fprintf(stderr, "ready> ");
+  }
   Tokenizer::get_next_token();
   jit::s_jit = std::move(jit::Create());
   Generator::init_generator();
@@ -160,7 +184,7 @@ int main()
 
   MainLoop();
 
-  if(!target::m_use_jit) {
+  if(!target::m_use_jit && Generator::m_output_object_file) {
     auto filename = "output.o";
     std::error_code ec;
     llvm::raw_fd_ostream dest(filename, ec, llvm::sys::fs::OF_None);

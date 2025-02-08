@@ -58,3 +58,7 @@ set(llvm_libs   LLVMWindowsManifest LLVMXRay LLVMLibDriver LLVMDlltoolDriver LLV
 
 message(STATUS "LLVM Libs : ${llvm_libs}")
 target_link_libraries(kaleidoscope-compiler ${llvm_libs})
+
+add_custom_command(TARGET kaleidoscope-compiler PRE_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/samples $<TARGET_FILE_DIR:kaleidoscope-compiler>/samples)
