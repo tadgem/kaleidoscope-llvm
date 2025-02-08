@@ -3,12 +3,14 @@
 #include "parse.h"
 #include "generate.h"
 #include "jit.h"
+#include "target.h"
 #include "llvm/Support/Error.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/IR/LegacyPassManager.h"
+
 using namespace kal;
 
 void HandleDefinition()
@@ -145,23 +147,44 @@ extern "C" DLLEXPORT double putchard(double X) {
 
 int main()
 {
-  llvm::InitializeNativeTarget();
-  llvm::InitializeNativeTargetAsmPrinter();
-  llvm::InitializeNativeTargetAsmParser();
-
+  target::m_use_jit = false;
+  target::init_target();
   Tokenizer::init_tokenizer_presedence();
 
   fprintf(stderr, "ready> ");
 
   Tokenizer::get_next_token();
-
   jit::s_jit = std::move(jit::Create());
-
   Generator::init_generator();
   Generator::init_opt_passes();
 
   MainLoop();
 
-  Generator::m_module->print(errs(), nullptr);
+  if(!target::m_use_jit) {
+    auto filename = "output.o";
+    std::error_code ec;
+    llvm::raw_fd_ostream dest(filename, ec, llvm::sys::fs::OF_None);
+
+    if (ec) {
+        llvm::errs() << "could not open file for writing object file"
+                     << ec.message() << "\n";
+        return 1;
+    }
+
+    legacy::PassManager pass_manager;
+    auto filetype = llvm::CodeGenFileType::ObjectFile;
+    if (target::m_target_machine->addPassesToEmitFile(pass_manager, dest,
+                                                      nullptr, filetype)) {
+        llvm::errs() << "Target Machine cannot emit an object file\n";
+        return 1;
+    }
+
+    pass_manager.run(*Generator::m_module);
+    dest.flush();
+  }
+  else
+  {
+    Generator::m_module->print(errs(), nullptr);
+  }
   return 0;
 }
