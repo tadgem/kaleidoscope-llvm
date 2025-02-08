@@ -30,7 +30,7 @@ void kal::Generator::init_opt_passes() {
   m_CGAM = std::make_unique<CGSCCAnalysisManager>();
   m_MAM = std::make_unique<ModuleAnalysisManager>();
   m_PIC = std::make_unique<PassInstrumentationCallbacks>();
-  m_SI = std::make_unique<StandardInstrumentations>(*m_context, m_debug_logging);
+  m_SI = std::make_unique<StandardInstrumentations>(*m_context, m_debug);
 
   m_SI->registerCallbacks(*m_PIC, m_MAM.get());
 

@@ -22,7 +22,7 @@ public:
   static void init_generator();
   static void init_opt_passes();
 
-  inline static bool m_debug_logging = true;
+  inline static bool m_debug = true;
 
   inline static std::unique_ptr<LLVMContext>                  m_context;
   inline static std::unique_ptr<IRBuilder<>>                  m_ir_builder;

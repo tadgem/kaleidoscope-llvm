@@ -80,7 +80,7 @@ void HandleTopLevelExpressions()
       Generator::init_generator();
       Generator::init_opt_passes();
 
-      auto ExprSymbol = jit::s_jit->lookup("__anon_expr");
+      auto ExprSymbol = jit::s_jit->lookup("main");
       assert(ExprSymbol && "Function not found");
 
       double (*FP)() = ExprSymbol->getAddress().toPtr<double (*)()>();
